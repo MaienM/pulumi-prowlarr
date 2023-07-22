@@ -20,23 +20,29 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ettle/strcase"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/MaienM/pulumi-prowlarr/provider/pkg/version"
 	shimprovider "github.com/devopsarr/terraform-provider-prowlarr/shim"
+	"github.com/ettle/strcase"
 	pf "github.com/pulumi/pulumi-terraform-bridge/pf/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
-	"github.com/MaienM/pulumi-prowlarr/provider/pkg/version"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
 //go:embed cmd/pulumi-resource-prowlarr/bridge-metadata.json
 var bridgeMetadata []byte
 
-
 // all of the token components used below.
 const (
 	// This variable controls the default name of the package in the package
-	mainMod = "index" // the prowlarr module
+	mainMod            = "index" // the prowlarr module
+	modApplications    = "Application"
+	modDownloadClients = "DownloadClient"
+	modIndexerProxies  = "IndexerProxy"
+	modIndexers        = "Indexer"
+	modNotification    = "Notification"
+	modStatus          = "Status"
+	modTags            = "Tag"
 )
 
 func convertName(name string) string {
@@ -56,13 +62,15 @@ func makeResource(mod string, res string) tokens.Type {
 	return tfbridge.MakeResource("prowlarr", mod, convertName(res))
 }
 
-
-
 // Provider returns additional overlaid schema and metadata associated with the provider..
-func Provider() pf.ProviderInfo {
-// Create a Pulumi provider mapping
-	prov := tfbridge.ProviderInfo{
+func Provider() tfbridge.ProviderInfo {
+	// Instantiate the Terraform provider
+	p := pf.ShimProvider(shimprovider.NewProvider(version.Version)())
+
+	// Create a Pulumi provider mapping
+	return tfbridge.ProviderInfo{
 		Name: "prowlarr",
+		P:    p,
 		// DisplayName is a way to be able to change the casing of the provider
 		// name when being displayed on the Pulumi registry
 		DisplayName: "prowlarr",
@@ -85,7 +93,7 @@ func Provider() pf.ProviderInfo {
 		// category/cloud tag helps with categorizing the package in the Pulumi Registry.
 		// For all available categories, see `Keywords` in
 		// https://www.pulumi.com/docs/guides/pulumi-packages/schema/#package.
-		Keywords:   []string{
+		Keywords: []string{
 			"pulumi",
 			"prowlarr",
 			"category/infrastructure",
@@ -95,37 +103,99 @@ func Provider() pf.ProviderInfo {
 		Repository: "https://github.com/MaienM/pulumi-prowlarr",
 		// The GitHub Org for the provider - defaults to `terraform-providers`. Note that this
 		// should match the TF provider module's require directive, not any replace directives.
-		Version:   version.Version,
-		GitHubOrg: "devopsarr",
+		Version:      version.Version,
+		GitHubOrg:    "devopsarr",
 		MetadataInfo: tfbridge.NewProviderMetadata(bridgeMetadata),
-		Config:    map[string]*tfbridge.SchemaInfo{
-			// Add any required configuration here, or remove the example below if
-			// no additional points are required.
-			// "region": {
-			// 	Type: tfbridge.MakeType("region", "Region"),
-			// 	Default: &tfbridge.DefaultInfo{
-			// 		EnvVars: []string{"AWS_REGION", "AWS_DEFAULT_REGION"},
-			// 	},
-			// },
-		},
-		Resources:            map[string]*tfbridge.ResourceInfo{
-			// Map each resource in the Terraform provider to a Pulumi type. Two examples
-			// are below - the single line form is the common case. The multi-line form is
-			// needed only if you wish to override types or other default options.
-			//
-			// "aws_iam_role": {Tok: makeResource(mainMod(mainMod, "aws_iam_role")}
-			//
-			// "aws_acm_certificate": {
-			// 	Tok: Tok: makeResource(mainMod(mainMod, "aws_acm_certificate"),
-			// 	Fields: map[string]*tfbridge.SchemaInfo{
-			// 		"tags": {Type: tfbridge.MakeType("prowlarr", "Tags")},
-			// 	},
-			// },
+		Config:       map[string]*tfbridge.SchemaInfo{},
+		Resources: map[string]*tfbridge.ResourceInfo{
+			"prowlarr_application":                {Tok: makeResource(modApplications, "prowlarr_application")},
+			"prowlarr_application_lazy_librarian": {Tok: makeResource(modApplications, "prowlarr_application_lazy_librarian")},
+			"prowlarr_application_lidarr":         {Tok: makeResource(modApplications, "prowlarr_application_lidarr")},
+			"prowlarr_application_mylar":          {Tok: makeResource(modApplications, "prowlarr_application_mylar")},
+			"prowlarr_application_radarr":         {Tok: makeResource(modApplications, "prowlarr_application_radarr")},
+			"prowlarr_application_readarr":        {Tok: makeResource(modApplications, "prowlarr_application_readarr")},
+			"prowlarr_application_sonarr":         {Tok: makeResource(modApplications, "prowlarr_application_sonarr")},
+			"prowlarr_application_whisparr":       {Tok: makeResource(modApplications, "prowlarr_application_whisparr")},
+			"prowlarr_sync_profile":               {Tok: makeResource(modApplications, "prowlarr_sync_profile")},
+
+			"prowlarr_download_client":                          {Tok: makeResource(modDownloadClients, "prowlarr_download_client")},
+			"prowlarr_download_client_aria2":                    {Tok: makeResource(modDownloadClients, "prowlarr_download_client_aria2")},
+			"prowlarr_download_client_deluge":                   {Tok: makeResource(modDownloadClients, "prowlarr_download_client_deluge")},
+			"prowlarr_download_client_flood":                    {Tok: makeResource(modDownloadClients, "prowlarr_download_client_flood")},
+			"prowlarr_download_client_freebox":                  {Tok: makeResource(modDownloadClients, "prowlarr_download_client_freebox")},
+			"prowlarr_download_client_hadouken":                 {Tok: makeResource(modDownloadClients, "prowlarr_download_client_hadouken")},
+			"prowlarr_download_client_nzbget":                   {Tok: makeResource(modDownloadClients, "prowlarr_download_client_nzbget")},
+			"prowlarr_download_client_nzbvortex":                {Tok: makeResource(modDownloadClients, "prowlarr_download_client_nzbvortex")},
+			"prowlarr_download_client_pneumatic":                {Tok: makeResource(modDownloadClients, "prowlarr_download_client_pneumatic")},
+			"prowlarr_download_client_qbittorrent":              {Tok: makeResource(modDownloadClients, "prowlarr_download_client_qbittorrent")},
+			"prowlarr_download_client_rtorrent":                 {Tok: makeResource(modDownloadClients, "prowlarr_download_client_rtorrent")},
+			"prowlarr_download_client_sabnzbd":                  {Tok: makeResource(modDownloadClients, "prowlarr_download_client_sabnzbd")},
+			"prowlarr_download_client_torrent_blackhole":        {Tok: makeResource(modDownloadClients, "prowlarr_download_client_torrent_blackhole")},
+			"prowlarr_download_client_torrent_download_station": {Tok: makeResource(modDownloadClients, "prowlarr_download_client_torrent_download_station")},
+			"prowlarr_download_client_transmission":             {Tok: makeResource(modDownloadClients, "prowlarr_download_client_transmission")},
+			"prowlarr_download_client_usenet_blackhole":         {Tok: makeResource(modDownloadClients, "prowlarr_download_client_usenet_blackhole")},
+			"prowlarr_download_client_usenet_download_station":  {Tok: makeResource(modDownloadClients, "prowlarr_download_client_usenet_download_station")},
+			"prowlarr_download_client_utorrent":                 {Tok: makeResource(modDownloadClients, "prowlarr_download_client_utorrent")},
+			"prowlarr_download_client_vuze":                     {Tok: makeResource(modDownloadClients, "prowlarr_download_client_vuze")},
+
+			"prowlarr_indexer": {Tok: makeResource(modIndexers, "prowlarr_indexer")},
+
+			"prowlarr_indexer_proxy":              {Tok: makeResource(modIndexerProxies, "prowlarr_indexer_proxy")},
+			"prowlarr_indexer_proxy_flaresolverr": {Tok: makeResource(modIndexerProxies, "prowlarr_indexer_proxy_flaresolverr")},
+			"prowlarr_indexer_proxy_http":         {Tok: makeResource(modIndexerProxies, "prowlarr_indexer_proxy_http")},
+			"prowlarr_indexer_proxy_socks4":       {Tok: makeResource(modIndexerProxies, "prowlarr_indexer_proxy_socks4")},
+			"prowlarr_indexer_proxy_socks5":       {Tok: makeResource(modIndexerProxies, "prowlarr_indexer_proxy_socks5")},
+
+			"prowlarr_notification":               {Tok: makeResource(modNotification, "prowlarr_notification")},
+			"prowlarr_notification_apprise":       {Tok: makeResource(modNotification, "prowlarr_notification_apprise")},
+			"prowlarr_notification_boxcar":        {Tok: makeResource(modNotification, "prowlarr_notification_boxcar")},
+			"prowlarr_notification_custom_script": {Tok: makeResource(modNotification, "prowlarr_notification_custom_script")},
+			"prowlarr_notification_discord":       {Tok: makeResource(modNotification, "prowlarr_notification_discord")},
+			"prowlarr_notification_email":         {Tok: makeResource(modNotification, "prowlarr_notification_email")},
+			"prowlarr_notification_gotify":        {Tok: makeResource(modNotification, "prowlarr_notification_gotify")},
+			"prowlarr_notification_join":          {Tok: makeResource(modNotification, "prowlarr_notification_join")},
+			"prowlarr_notification_mailgun":       {Tok: makeResource(modNotification, "prowlarr_notification_mailgun")},
+			"prowlarr_notification_notifiarr":     {Tok: makeResource(modNotification, "prowlarr_notification_notifiarr")},
+			"prowlarr_notification_ntfy":          {Tok: makeResource(modNotification, "prowlarr_notification_ntfy")},
+			"prowlarr_notification_prowl":         {Tok: makeResource(modNotification, "prowlarr_notification_prowl")},
+			"prowlarr_notification_pushbullet":    {Tok: makeResource(modNotification, "prowlarr_notification_pushbullet")},
+			"prowlarr_notification_pushover":      {Tok: makeResource(modNotification, "prowlarr_notification_pushover")},
+			"prowlarr_notification_sendgrid":      {Tok: makeResource(modNotification, "prowlarr_notification_sendgrid")},
+			"prowlarr_notification_signal":        {Tok: makeResource(modNotification, "prowlarr_notification_signal")},
+			"prowlarr_notification_simplepush":    {Tok: makeResource(modNotification, "prowlarr_notification_simplepush")},
+			"prowlarr_notification_slack":         {Tok: makeResource(modNotification, "prowlarr_notification_slack")},
+			"prowlarr_notification_telegram":      {Tok: makeResource(modNotification, "prowlarr_notification_telegram")},
+			"prowlarr_notification_twitter":       {Tok: makeResource(modNotification, "prowlarr_notification_twitter")},
+			"prowlarr_notification_webhook":       {Tok: makeResource(modNotification, "prowlarr_notification_webhook")},
+
+			"prowlarr_tag": {Tok: makeResource(modTags, "prowlarr_tag")},
 		},
 		DataSources: map[string]*tfbridge.DataSourceInfo{
-			// Map each resource in the Terraform provider to a Pulumi function. An example
-			// is below.
-			// "aws_ami": {Tok: makeDataSource(mainMod, "aws_ami")},
+			"prowlarr_application":   {Tok: makeDataSource(modApplications, "prowlarr_application")},
+			"prowlarr_applications":  {Tok: makeDataSource(modApplications, "prowlarr_applications")},
+			"prowlarr_sync_profile":  {Tok: makeDataSource(modApplications, "prowlarr_sync_profile")},
+			"prowlarr_sync_profiles": {Tok: makeDataSource(modApplications, "prowlarr_sync_profiles")},
+
+			"prowlarr_download_client":  {Tok: makeDataSource(modDownloadClients, "prowlarr_download_client")},
+			"prowlarr_download_clients": {Tok: makeDataSource(modDownloadClients, "prowlarr_download_clients")},
+
+			"prowlarr_indexer_proxies": {Tok: makeDataSource(modIndexerProxies, "prowlarr_indexer_proxies")},
+			"prowlarr_indexer_proxy":   {Tok: makeDataSource(modIndexerProxies, "prowlarr_indexer_proxy")},
+
+			"prowlarr_indexer":         {Tok: makeDataSource(modIndexers, "prowlarr_indexer")},
+			"prowlarr_indexers":        {Tok: makeDataSource(modIndexers, "prowlarr_indexers")},
+			"prowlarr_indexer_schema":  {Tok: makeDataSource(modIndexers, "prowlarr_indexer_schema")},
+			"prowlarr_indexer_schemas": {Tok: makeDataSource(modIndexers, "prowlarr_indexer_schemas")},
+
+			"prowlarr_notification":  {Tok: makeDataSource(modNotification, "prowlarr_notification")},
+			"prowlarr_notifications": {Tok: makeDataSource(modNotification, "prowlarr_notifications")},
+
+			"prowlarr_system_status": {Tok: makeDataSource(modStatus, "prowlarr_system_status")},
+
+			"prowlarr_tag":          {Tok: makeDataSource(modTags, "prowlarr_tag")},
+			"prowlarr_tag_details":  {Tok: makeDataSource(modTags, "prowlarr_tag_details")},
+			"prowlarr_tags":         {Tok: makeDataSource(modTags, "prowlarr_tags")},
+			"prowlarr_tags_details": {Tok: makeDataSource(modTags, "prowlarr_tags_details")},
 		},
 		JavaScript: &tfbridge.JavaScriptInfo{
 			PackageName: "@maienm/pulumi-prowlarr",
@@ -171,9 +241,4 @@ func Provider() pf.ProviderInfo {
 			BasePackage: "com.maienm",
 		},
 	}
-
-
-	return pf.ProviderInfo{
-		ProviderInfo: prov,
-		NewProvider:  shimprovider.NewProvider(),}
 }
